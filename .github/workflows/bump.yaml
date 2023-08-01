@@ -1,0 +1,40 @@
+name: Bump
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Install hatch
+        run: python3 -m pip install --upgrade hatch
+      - name: Bump, commit, tag and push
+        run: |
+          git config --global user.name 'autobump'
+          git config --global user.email 'autobump'
+          VERSION=`hatch version`
+          hatch version ${{ inputs.version }}
+          NEW_VERSION=`hatch version`
+          git add ./src/pointcloud2/__about__.py
+          git commit -m "Bump version: $VERSION → $NEW_VERSION"
+          git tag "v$NEW_VERSION"
+          git push
+          git push --tags

@@ -1,7 +1,7 @@
 [project]
 name = "pointcloud2"
 version = "0.1.0"
-description = "Add your description here"
+description = "PointCloud2 lib for non ROS environments"
 authors = [
     { name = "Marko Bausch", email = "60338487+mrkbac@users.noreply.github.com" }
 ]
@@ -10,7 +10,17 @@ dependencies = [
 ]
 readme = "README.md"
 requires-python = ">= 3.8"
-classifiers = ["Private :: Do Not Upload"]
+
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: MIT License",
+]
+
 
 [build-system]
 requires = ["hatchling"]
@@ -25,8 +35,6 @@ dev-dependencies = [
 
 [tool.hatch.metadata]
 allow-direct-references = true
-
-
 
 [tool.autopep8]
 max_line_length = 100
