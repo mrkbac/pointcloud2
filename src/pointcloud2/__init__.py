@@ -36,16 +36,18 @@ from __future__ import annotations
 
 import array
 import sys
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from typing import Any, ClassVar
+from typing import Any
 
 import numpy as np
 from numpy.lib.recfunctions import unstructured_to_structured
 
+from pointcloud2.types import Pointcloud2Msg, PointFieldMsg
 
-@dataclass
-class PointField:
+
+@dataclass(slots=True)
+class PointField(PointFieldMsg):
     """
     PointField holds the description of one point entry in the PointCloud2 message format.
 
@@ -53,36 +55,20 @@ class PointField:
     """
 
     name: str
-    """Name of field"""
-
     offset: int
-    """Offset from start of point struct"""
-
     datatype: int
-    """Datatype enumeration, see above"""
-
     count: int = 1
-    """How many elements in the field"""
-
-    INT8: ClassVar[int] = 1
-    UINT8: ClassVar[int] = 2
-    INT16: ClassVar[int] = 3
-    UINT16: ClassVar[int] = 4
-    INT32: ClassVar[int] = 5
-    UINT32: ClassVar[int] = 6
-    FLOAT32: ClassVar[int] = 7
-    FLOAT64: ClassVar[int] = 8
 
 
 FIELD_TYPE_TO_NP: dict[int, np.dtype] = {}
-FIELD_TYPE_TO_NP[1] = np.dtype(np.int8)
-FIELD_TYPE_TO_NP[2] = np.dtype(np.uint8)
-FIELD_TYPE_TO_NP[3] = np.dtype(np.int16)
-FIELD_TYPE_TO_NP[4] = np.dtype(np.uint16)
-FIELD_TYPE_TO_NP[5] = np.dtype(np.int32)
-FIELD_TYPE_TO_NP[6] = np.dtype(np.uint32)
-FIELD_TYPE_TO_NP[7] = np.dtype(np.float32)
-FIELD_TYPE_TO_NP[8] = np.dtype(np.float64)
+FIELD_TYPE_TO_NP[PointFieldMsg.INT8] = np.dtype(np.int8)
+FIELD_TYPE_TO_NP[PointFieldMsg.UINT8] = np.dtype(np.uint8)
+FIELD_TYPE_TO_NP[PointFieldMsg.INT16] = np.dtype(np.int16)
+FIELD_TYPE_TO_NP[PointFieldMsg.UINT16] = np.dtype(np.uint16)
+FIELD_TYPE_TO_NP[PointFieldMsg.INT32] = np.dtype(np.int32)
+FIELD_TYPE_TO_NP[PointFieldMsg.UINT32] = np.dtype(np.uint32)
+FIELD_TYPE_TO_NP[PointFieldMsg.FLOAT32] = np.dtype(np.float32)
+FIELD_TYPE_TO_NP[PointFieldMsg.FLOAT64] = np.dtype(np.float64)
 
 NP_TO_FIELD_TYPE: dict[Any, int] = {
     v: k for k, v in FIELD_TYPE_TO_NP.items()
@@ -91,7 +77,7 @@ NP_TO_FIELD_TYPE: dict[Any, int] = {
 DUMMY_FIELD_PREFIX = 'unnamed_field'
 
 
-def dtype_from_fields(fields: Iterable[PointField], point_step: int | None = None) -> np.dtype:
+def dtype_from_fields(fields: Iterable[PointFieldMsg], point_step: int | None = None) -> np.dtype:
     """
     Convert a Iterable of sensor_msgs.msg.PointField messages to a np.dtype.
 
@@ -131,7 +117,7 @@ def dtype_from_fields(fields: Iterable[PointField], point_step: int | None = Non
     return np.dtype(dtype_dict)
 
 
-def fields_from_dtype(dtype: np.dtype) -> list[PointField]:
+def fields_from_dtype(dtype: np.dtype) -> list[PointFieldMsg]:
     """
     Convert a NumPy dtype to a list of PointField messages.
 
@@ -146,12 +132,13 @@ def fields_from_dtype(dtype: np.dtype) -> list[PointField]:
 
 
 def read_points(
-        cloud: Any,
-        field_names: list[str] | None = None,
-        *,
-        skip_nans: bool = False,
-        uvs: Iterable | None = None,
-        reshape_organized_cloud: bool = False) -> np.ndarray:
+    cloud: Pointcloud2Msg,
+    field_names: list[str] | None = None,
+    *,
+    skip_nans: bool = False,
+    uvs: Iterable[int] | np.ndarray | None = None,
+    reshape_organized_cloud: bool = False,
+) -> np.ndarray:
     """
     Read points from a sensor_msgs.PointCloud2 message.
 
@@ -168,7 +155,8 @@ def read_points(
     points = np.ndarray(
         shape=(cloud.width * cloud.height,),
         dtype=dtype_from_fields(cloud.fields, point_step=cloud.point_step),
-        buffer=cloud.data)
+        buffer=cloud.data,
+    )
 
     # Keep only the requested fields
     if field_names is not None:
@@ -209,7 +197,7 @@ def read_points(
 
 def create_cloud(
     header: Any,
-    fields: Iterable,
+    fields: Sequence[PointFieldMsg],
     points: np.ndarray,
     step: int | None = None,
 ) -> Any:
