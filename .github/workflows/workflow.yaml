@@ -21,7 +21,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - uses: chartboost/ruff-action@v1
+
+      - uses: sksat/setup-rye@v0.5.0
+      - run: rye sync --no-lock
+
+      - run: rye run check
 
   build:
     if: github.event_name == 'release' || github.event.inputs.job == 'build'
@@ -38,16 +42,10 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.10"
+      - uses: sksat/setup-rye@v0.5.0
+      - run: rye sync --no-lock
 
-      - name: Install build
-        run: python3 -m pip install --upgrade build
-
-      - name: Building
-        run: python3 -m build
+      - run: rye run build
 
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1

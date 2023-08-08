@@ -30,7 +30,12 @@
 # https://github.com/ros2/common_interfaces/blob/rolling/sensor_msgs_py/sensor_msgs_py/point_cloud2.py
 
 
-"""Conversion functions between PointCloud2 and numpy."""
+"""
+PointCloud2 lib for non ROS environment.
+
+.. include:: ../../README.md
+
+"""
 
 from __future__ import annotations
 
@@ -38,20 +43,31 @@ import array
 import sys
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import numpy as np
 from numpy.lib.recfunctions import unstructured_to_structured
 
-from pointcloud2.types import Pointcloud2Msg, PointFieldMsg
+if TYPE_CHECKING:
+    from pointcloud2.messages import Pointcloud2Msg, PointFieldMsg
 
 
-@dataclass(slots=True)
-class PointField(PointFieldMsg):
+__docformat__ = 'google'
+__version__ = '0.2.0'
+
+
+@dataclass
+class PointField:
     """
     PointField holds the description of one point entry in the PointCloud2 message format.
 
     Based on https://github.com/ros2/common_interfaces/blob/humble/sensor_msgs/msg/PointField.msg
+
+    Example:
+    >>> PointField('x', 0, PointField.FLOAT32)
+    PointField(name='x', offset=0, datatype=7, count=1)
+
+    @private
     """
 
     name: str
@@ -59,20 +75,50 @@ class PointField(PointFieldMsg):
     datatype: int
     count: int = 1
 
+    INT8: ClassVar[int] = 1
+    UINT8: ClassVar[int] = 2
+    INT16: ClassVar[int] = 3
+    UINT16: ClassVar[int] = 4
+    INT32: ClassVar[int] = 5
+    UINT32: ClassVar[int] = 6
+    FLOAT32: ClassVar[int] = 7
+    FLOAT64: ClassVar[int] = 8
+
 
 FIELD_TYPE_TO_NP: dict[int, np.dtype] = {}
-FIELD_TYPE_TO_NP[PointFieldMsg.INT8] = np.dtype(np.int8)
-FIELD_TYPE_TO_NP[PointFieldMsg.UINT8] = np.dtype(np.uint8)
-FIELD_TYPE_TO_NP[PointFieldMsg.INT16] = np.dtype(np.int16)
-FIELD_TYPE_TO_NP[PointFieldMsg.UINT16] = np.dtype(np.uint16)
-FIELD_TYPE_TO_NP[PointFieldMsg.INT32] = np.dtype(np.int32)
-FIELD_TYPE_TO_NP[PointFieldMsg.UINT32] = np.dtype(np.uint32)
-FIELD_TYPE_TO_NP[PointFieldMsg.FLOAT32] = np.dtype(np.float32)
-FIELD_TYPE_TO_NP[PointFieldMsg.FLOAT64] = np.dtype(np.float64)
+FIELD_TYPE_TO_NP[PointField.INT8] = np.dtype(np.int8)
+FIELD_TYPE_TO_NP[PointField.UINT8] = np.dtype(np.uint8)
+FIELD_TYPE_TO_NP[PointField.INT16] = np.dtype(np.int16)
+FIELD_TYPE_TO_NP[PointField.UINT16] = np.dtype(np.uint16)
+FIELD_TYPE_TO_NP[PointField.INT32] = np.dtype(np.int32)
+FIELD_TYPE_TO_NP[PointField.UINT32] = np.dtype(np.uint32)
+FIELD_TYPE_TO_NP[PointField.FLOAT32] = np.dtype(np.float32)
+FIELD_TYPE_TO_NP[PointField.FLOAT64] = np.dtype(np.float64)
 
 NP_TO_FIELD_TYPE: dict[Any, int] = {
     v: k for k, v in FIELD_TYPE_TO_NP.items()
 }
+
+
+@dataclass
+class PointCloud2:
+    """PointCloud2 message interface.
+
+    @private
+
+    Based on: https://github.com/ros2/common_interfaces/blob/humble/sensor_msgs/msg/PointCloud2.msg
+    """
+
+    header: Any
+    height: int
+    width: int
+    fields: Sequence[PointFieldMsg]
+    is_bigendian: bool
+    point_step: int
+    row_step: int
+    data: bytes
+    is_dense: bool
+
 
 DUMMY_FIELD_PREFIX = 'unnamed_field'
 
@@ -81,9 +127,18 @@ def dtype_from_fields(fields: Iterable[PointFieldMsg], point_step: int | None = 
     """
     Convert a Iterable of sensor_msgs.msg.PointField messages to a np.dtype.
 
-    :param fields: The point cloud fields.
-                   (Type: iterable of sensor_msgs.msg.PointField)
-    :returns: NumPy datatype
+    Example:
+    >>> dtype_from_fields([PointField('x', 0, PointField.FLOAT32)])
+    dtype([('x', '<f4')])
+
+
+    Args:
+        fields: The fields to convert.
+        point_step: The point step of the point cloud. If None, the point step is
+            calculated from the fields.
+
+    Returns:
+        The NumPy dtype.
     """
     # Create a lists containing the names, offsets and datatypes of all fields
     field_names: list[str] = []
@@ -118,15 +173,21 @@ def dtype_from_fields(fields: Iterable[PointFieldMsg], point_step: int | None = 
 
 
 def fields_from_dtype(dtype: np.dtype) -> list[PointFieldMsg]:
-    """
-    Convert a NumPy dtype to a list of PointField messages.
+    """Convert a NumPy dtype to a list of PointField messages.
 
-    :param dtype: The NumPy dtype to convert.
-    :returns: List of PointField messages.
+    Example:
+    >>> fields_from_dtype(np.dtype([('x', '<f4')]))
+    [PointField(name='x', offset=0, datatype=7, count=1)]
+
+    Args:
+        dtype: The NumPy dtype to convert.
+
+    Returns:
+        A list of PointField messages.
     """
     fields = []
     for name, (dt, offset) in dtype.fields.items():
-        fields.append(PointField(name, offset, NP_TO_FIELD_TYPE[dt.type]))
+        fields.append(PointField(name, offset, NP_TO_FIELD_TYPE[np.dtype(dt.type)]))
 
     return fields
 
@@ -140,17 +201,19 @@ def read_points(
     reshape_organized_cloud: bool = False,
 ) -> np.ndarray:
     """
-    Read points from a sensor_msgs.PointCloud2 message.
+    Read points from a sensor_msgs.PointCloud2 compatible type.
 
-    :param cloud: The point cloud to read from sensor_msgs.PointCloud2.
-    :param field_names: The names of fields to read. If None, read all fields.
-                        (Type: Iterable, Default: None)
-    :param skip_nans: If True, then don't return any point with a NaN value.
-                      (Type: Bool, Default: False)
-    :param uvs: If specified, then only return the points at the given
-        coordinates. (Type: Iterable, Default: None)
-    :param reshape_organized_cloud: Returns the array as an 2D organized point cloud if set.
-    :return: Structured NumPy array containing all points.
+    See `pointcloud2.messages.Pointcloud2Msg` for more information.
+
+    Args:
+        cloud: The point cloud to read from `pointcloud2.messages.Pointcloud2Msg`.
+        field_names: The names of fields to read. If None, read all fields.
+        skip_nans: If True, then don't return any point with a NaN value.
+        uvs: If specified, then only return the points at the given coordinates.
+        reshape_organized_cloud: Returns the array as an 2D organized point cloud if set.
+
+    Returns:
+        Structured NumPy array containing points.
     """
     points = np.ndarray(
         shape=(cloud.width * cloud.height,),
@@ -200,30 +263,32 @@ def create_cloud(
     fields: Sequence[PointFieldMsg],
     points: np.ndarray,
     step: int | None = None,
-) -> Any:
+) -> PointCloud2:
     """
-    Create a sensor_msgs.msg.PointCloud2 message.
+    Create a PointCloud2 message.
 
-    :param header: The point cloud header. (Type: std_msgs.msg.Header)
-    :param fields: The point cloud fields.
-                   (Type: iterable of sensor_msgs.msg.PointField)
-    :param points: The point cloud points. List of iterables, i.e. one iterable
+    Args:
+        header: The point cloud header, see `pointcloud2.messages.Pointcloud2Msg.header`
+        fields: The point cloud fields.
+        points: The point cloud points. List of iterables, i.e. one iterable
                    for each point, with the elements of each iterable being the
                    values of the fields for that point (in the same order as
                    the fields parameter)
-    :return: The point cloud as sensor_msgs.msg.PointCloud2.
+        step: The point step of the point cloud. If None, the point step is
+            calculated from the fields.
+
+    Returns:
+        The point cloud as PointCloud2 message.
     """
     # Check if input is numpy array
     if isinstance(points, np.ndarray):
         # Check if this is an unstructured array
         if points.dtype.names is None:
-            assert all(fields[0].datatype == field.datatype for field in fields[1:]), \
-                'All fields need to have the same datatype. Pass a structured NumPy array \
-                    with multiple dtypes otherwise.'
             # Convert unstructured to structured array
             points = unstructured_to_structured(
                 points,
-                dtype=dtype_from_fields(fields, point_step=step))
+                dtype=dtype_from_fields(fields, point_step=step),
+            )
         else:
             assert points.dtype == dtype_from_fields(fields, point_step=step), \
                 'PointFields and structured NumPy array dtype do not match for all fields! \
@@ -252,17 +317,14 @@ def create_cloud(
     array_array.frombytes(casted)
 
     # Put everything together
-    cloud = {
-        'header': header,
-        'height': height,
-        'width': width,
-        'is_dense': False,
-        'is_bigendian': sys.byteorder != 'little',
-        'fields': fields,
-        'point_step': points.dtype.itemsize,
-        'row_step': (points.dtype.itemsize * width),
-    }
-    # Set cloud via property instead of the constructor because of the bug described in
-    # https://github.com/ros2/common_interfaces/issues/176
-    cloud['data'] = np.array(array_array, dtype=np.uint8).tobytes()
-    return cloud
+    return PointCloud2(
+        header=header,
+        height=height,
+        width=width,
+        fields=fields,
+        is_bigendian=sys.byteorder != 'little',
+        point_step=points.dtype.itemsize,
+        row_step=points.dtype.itemsize * width,
+        data=array_array.tobytes(),
+        is_dense=False,
+    )

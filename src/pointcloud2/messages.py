@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import Any, ClassVar, Protocol
+from typing import Any, Protocol
 
 
 class PointFieldMsg(Protocol):
@@ -33,19 +33,10 @@ class PointFieldMsg(Protocol):
         """How many elements in the field."""
         ...
 
-    INT8: ClassVar[int] = 1
-    UINT8: ClassVar[int] = 2
-    INT16: ClassVar[int] = 3
-    UINT16: ClassVar[int] = 4
-    INT32: ClassVar[int] = 5
-    UINT32: ClassVar[int] = 6
-    FLOAT32: ClassVar[int] = 7
-    FLOAT64: ClassVar[int] = 8
-
 
 class Pointcloud2Msg(Protocol):
     """
-    PointCloud2 message interface.
+    Python Protocol for the ROS PointCloud2 message.
 
     Based on: https://github.com/ros2/common_interfaces/blob/humble/sensor_msgs/msg/PointCloud2.msg
 
