@@ -45,7 +45,7 @@ jobs:
       - uses: sksat/setup-rye@v0.5.0
       - run: rye sync --no-lock
 
-      - run: rye run build
+      - run: rye build
 
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
