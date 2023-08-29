@@ -53,7 +53,7 @@ if TYPE_CHECKING:
 
 
 __docformat__ = 'google'
-__version__ = '0.2.0'
+__version__ = '0.2.1'
 
 
 @dataclass
