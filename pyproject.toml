@@ -2,11 +2,9 @@
 name = "pointcloud2"
 description = "PointCloud2 lib for non ROS environments"
 authors = [
-    { name = "Marko Bausch", email = "60338487+mrkbac@users.noreply.github.com" }
+    { name = "Marko Bausch", email = "60338487+mrkbac@users.noreply.github.com" },
 ]
-dependencies = [
-    "numpy>=1.24.4",
-]
+dependencies = ["numpy>1"]
 readme = "README.md"
 requires-python = ">= 3.8"
 
@@ -23,57 +21,47 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
 ]
 
-dynamic = ["version"]
+version = "0.2.2"
 
 [project.urls]
 Source = "https://github.com/mrkbac/pointcloud2"
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.rye]
-managed = true
-dev-dependencies = [
-    "autopep8>=2.0.2",
-    "pdoc>=14.0.0",
-    "ruff>=0.0.282",
-]
-
-[tool.rye.scripts]
-test = "python -m doctest ./src/pointcloud2/__init__.py"
-format = "autopep8 --in-place --recursive ./src/"
-lint = "ruff ./src"
-check = { chain = ["format", "lint", "test"] }
-doc = { chain = ["check", "pdoc --output ./docs --no-include-undocumented ./src/pointcloud2"] }
-
-[tool.hatch.metadata]
-allow-direct-references = true
-
-[tool.hatch.version]
-path = "src/pointcloud2/__init__.py"
-
-[tool.autopep8]
-max_line_length = 100
+requires = ["uv_build>=0.7.19,<0.8.0"]
+build-backend = "uv_build"
 
 [tool.ruff]
 line-length = 100
-
 target-version = 'py38'
+
+[tool.ruff.lint]
 select = ['ALL']
 
 ignore = [
-    'ANN101',  # missing-type-self
     'ANN401',  # any-type
     'D203',    # one-blank-line-before-class
     'D212',    # multi-line-summary-first-line
     'PLR2004', # MagicValueComparisons
     'S101',    # AssertUsed
-    'TCH003',  # typing-only-standard-library-import
+    'TC003',   # typing-only-standard-library-import
+
+    'COM812',
+    'ISC001',
 ]
 
-[tool.ruff.flake8-quotes]
+[tool.ruff.lint.per-file-ignores]
+# Relaxed lints for test files
+"test/**/*.py" = ["T201", "SLF001", "ANN201", "INP001"]
+
+
+[tool.ruff.lint.flake8-quotes]
 inline-quotes = 'single'
 
-[tool.ruff.pydocstyle]
+[tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.ruff.format]
+quote-style = "single"
+
+[dependency-groups]
+dev = ["pytest>=8.3.5"]

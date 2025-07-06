@@ -49,11 +49,10 @@ import numpy as np
 from numpy.lib.recfunctions import unstructured_to_structured
 
 if TYPE_CHECKING:
-    from pointcloud2.messages import Pointcloud2Msg, PointFieldMsg
+    from pointcloud2.messages import Pointcloud2Msg, PointFieldDict, PointFieldMsg
 
 
 __docformat__ = 'google'
-__version__ = '0.2.1'
 
 
 @dataclass
@@ -62,12 +61,6 @@ class PointField:
     PointField holds the description of one point entry in the PointCloud2 message format.
 
     Based on https://github.com/ros2/common_interfaces/blob/humble/sensor_msgs/msg/PointField.msg
-
-    Example:
-    >>> PointField('x', 0, PointField.FLOAT32)
-    PointField(name='x', offset=0, datatype=7, count=1)
-
-    @private
     """
 
     name: str
@@ -95,9 +88,7 @@ FIELD_TYPE_TO_NP[PointField.UINT32] = np.dtype(np.uint32)
 FIELD_TYPE_TO_NP[PointField.FLOAT32] = np.dtype(np.float32)
 FIELD_TYPE_TO_NP[PointField.FLOAT64] = np.dtype(np.float64)
 
-NP_TO_FIELD_TYPE: dict[Any, int] = {
-    v: k for k, v in FIELD_TYPE_TO_NP.items()
-}
+NP_TO_FIELD_TYPE: dict[Any, int] = {v: k for k, v in FIELD_TYPE_TO_NP.items()}
 
 
 @dataclass
@@ -223,8 +214,9 @@ def read_points(
 
     # Keep only the requested fields
     if field_names is not None:
-        assert all(field_name in points.dtype.names for field_name in field_names), \
+        assert all(field_name in points.dtype.names for field_name in field_names), (
             'Requests field is not in the fields of the PointCloud!'
+        )
         # Mask fields
         points = points[list(field_names)]
 
@@ -238,8 +230,7 @@ def read_points(
         not_nan_mask = np.ones(len(points), dtype=bool)
         for field_name in points.dtype.names:
             # Only keep points without any non values in the mask
-            not_nan_mask = np.logical_and(
-                not_nan_mask, ~np.isnan(points[field_name]))
+            not_nan_mask = np.logical_and(not_nan_mask, ~np.isnan(points[field_name]))
         # Select these points
         points = points[not_nan_mask]
 
@@ -260,7 +251,7 @@ def read_points(
 
 def create_cloud(
     header: Any,
-    fields: Sequence[PointFieldMsg],
+    fields: Sequence[PointFieldMsg | PointFieldDict],
     points: np.ndarray,
     step: int | None = None,
 ) -> PointCloud2:
@@ -269,7 +260,8 @@ def create_cloud(
 
     Args:
         header: The point cloud header, see `pointcloud2.messages.Pointcloud2Msg.header`
-        fields: The point cloud fields.
+        fields: The point cloud fields. Can be a list of `PointField` objects, or a
+            list of dictionaries with keys `name`, `offset`, `datatype`, and `count`.
         points: The point cloud points. List of iterables, i.e. one iterable
                    for each point, with the elements of each iterable being the
                    values of the fields for that point (in the same order as
@@ -280,6 +272,21 @@ def create_cloud(
     Returns:
         The point cloud as PointCloud2 message.
     """
+    # If fields are provided as dictionaries, convert them to a list of PointField objects
+    if fields and isinstance(fields[0], dict):
+        processed_fields = []
+        offset = 0
+        for field_dict in fields:
+            # Set default values for count and offset if not provided
+            count = field_dict.get('count', 1)
+            if 'offset' not in field_dict:
+                field_dict['offset'] = offset
+
+            processed_fields.append(PointField(**field_dict))
+            itemsize = FIELD_TYPE_TO_NP[field_dict['datatype']].itemsize
+            offset += itemsize * count
+        fields = processed_fields
+
     # Check if input is numpy array
     if isinstance(points, np.ndarray):
         # Check if this is an unstructured array
@@ -290,20 +297,23 @@ def create_cloud(
                 dtype=dtype_from_fields(fields, point_step=step),
             )
         else:
-            assert points.dtype == dtype_from_fields(fields, point_step=step), \
+            assert points.dtype == dtype_from_fields(fields, point_step=step), (
                 'PointFields and structured NumPy array dtype do not match for all fields! \
                     Check their field order, names and types.'
+            )
     else:
         # Cast python objects to structured NumPy array (slow)
         points = np.array(
             # Points need to be tuples in the structured array
             list(map(tuple, points)),
-            dtype=dtype_from_fields(fields, point_step=step))
+            dtype=dtype_from_fields(fields, point_step=step),
+        )
 
     # Handle organized clouds
-    assert len(points.shape) <= 2, \
+    assert len(points.shape) <= 2, (
         'Too many dimensions for organized cloud! \
             Points can only be organized in max. two dimensional space'
+    )
     height = 1
     width = points.shape[0]
     # Check if input points are an organized cloud (2D array of points)

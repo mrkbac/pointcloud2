@@ -1,9 +1,21 @@
 """Python typing protocol definitions for the PointCloud2 message."""
 
-
 from __future__ import annotations
 
-from typing import Any, Protocol
+from typing import Any, Protocol, TypedDict
+
+
+class PointFieldDict(TypedDict, total=False):
+    """
+    A dictionary representation of a PointField.
+
+    The `name` and `datatype` fields are required, while `count` and `offset` are optional.
+    """
+
+    name: str
+    offset: int
+    datatype: int
+    count: int
 
 
 class PointFieldMsg(Protocol):
