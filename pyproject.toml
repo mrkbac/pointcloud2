@@ -21,7 +21,7 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
 ]
 
-version = "0.2.2"
+version = "0.2.3"
 
 [project.urls]
 Source = "https://github.com/mrkbac/pointcloud2"

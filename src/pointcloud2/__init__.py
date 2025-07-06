@@ -112,7 +112,53 @@ class PointCloud2:
 DUMMY_FIELD_PREFIX = 'unnamed_field'
 
 
-def dtype_from_fields(fields: Iterable[PointFieldMsg], point_step: int | None = None) -> np.dtype:
+def _normalize_fields(fields: Iterable[PointFieldMsg | PointFieldDict]) -> list[PointField]:
+    """Convert fields to a list of PointField objects with calculated offsets.
+
+    Args:
+        fields: The fields to normalize.
+
+    Returns:
+        A list of PointField objects.
+    """
+    normalized_fields = []
+    current_offset = 0
+
+    for field in fields:
+        if isinstance(field, dict):
+            # PointFieldDict case
+            field_datatype = field['datatype']
+            field_name = field.get('name', '')
+            field_count = field.get('count', 1)
+
+            # Calculate offset if not provided
+            if 'offset' in field:
+                field_offset = field['offset']
+                current_offset = field_offset
+            else:
+                field_offset = current_offset
+
+            # Create PointField object
+            normalized_fields.append(
+                PointField(
+                    name=field_name, offset=field_offset, datatype=field_datatype, count=field_count
+                )
+            )
+
+            # Update current_offset for automatic calculation
+            if 'offset' not in field:
+                datatype_size = FIELD_TYPE_TO_NP[field_datatype].itemsize
+                current_offset += field_count * datatype_size
+        else:
+            # Already a PointField object
+            normalized_fields.append(field)
+
+    return normalized_fields
+
+
+def dtype_from_fields(
+    fields: Iterable[PointFieldMsg | PointFieldDict], point_step: int | None = None
+) -> np.dtype:
     """Convert a Iterable of sensor_msgs.msg.PointField messages to a np.dtype.
 
     Example:
@@ -128,11 +174,15 @@ def dtype_from_fields(fields: Iterable[PointFieldMsg], point_step: int | None = 
     Returns:
         The NumPy dtype.
     """
+    # Normalize fields to PointField objects
+    normalized_fields = _normalize_fields(fields)
+
     # Create a lists containing the names, offsets and datatypes of all fields
     field_names: list[str] = []
     field_offsets: list[int] = []
     field_datatypes: list[str] = []
-    for i, field in enumerate(fields):
+
+    for i, field in enumerate(normalized_fields):
         # Datatype as numpy datatype
         datatype = FIELD_TYPE_TO_NP[field.datatype]
         # Name field
@@ -247,7 +297,7 @@ def read_points(
 
 def create_cloud(
     header: Any,
-    fields: Sequence[PointFieldMsg | PointFieldDict],
+    fields: Iterable[PointFieldMsg | PointFieldDict],
     points: np.ndarray,
     step: int | None = None,
 ) -> PointCloud2:
@@ -267,21 +317,6 @@ def create_cloud(
     Returns:
         The point cloud as PointCloud2 message.
     """
-    # If fields are provided as dictionaries, convert them to a list of PointField objects
-    if fields and isinstance(fields[0], dict):
-        processed_fields = []
-        offset = 0
-        for field_dict in fields:
-            # Set default values for count and offset if not provided
-            count = field_dict.get('count', 1)
-            if 'offset' not in field_dict:
-                field_dict['offset'] = offset
-
-            processed_fields.append(PointField(**field_dict))
-            itemsize = FIELD_TYPE_TO_NP[field_dict['datatype']].itemsize
-            offset += itemsize * count
-        fields = processed_fields
-
     # Check if input is numpy array
     if isinstance(points, np.ndarray):
         # Check if this is an unstructured array
@@ -321,12 +356,15 @@ def create_cloud(
     array_array = array.array('B')
     array_array.frombytes(casted)
 
+    # Convert fields to PointField objects if they are dictionaries
+    converted_fields = _normalize_fields(fields)
+
     # Put everything together
     return PointCloud2(
         header=header,
         height=height,
         width=width,
-        fields=fields,
+        fields=converted_fields,
         is_bigendian=sys.byteorder != 'little',
         point_step=points.dtype.itemsize,
         row_step=points.dtype.itemsize * width,
