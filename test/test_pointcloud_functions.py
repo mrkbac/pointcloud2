@@ -10,7 +10,16 @@ class MockPointCloud2:
     """Mock PointCloud2 message for testing."""
 
     def __init__(
-        self, header, height, width, fields, is_bigendian, point_step, row_step, data, is_dense
+        self,
+        header,
+        height,
+        width,
+        fields,
+        is_bigendian,
+        point_step,
+        row_step,
+        data,
+        is_dense,
     ):
         self.header = header
         self.height = height
@@ -233,7 +242,7 @@ class TestCreateCloud:
             [
                 [1.0, 2.0, 3.0],
                 [4.0, 5.0, 6.0],
-            ]
+            ],
         )
 
         fields = [
@@ -295,7 +304,7 @@ class TestCreateCloud:
         points = np.array(
             [
                 [1.0, 2.0, 3.0],
-            ]
+            ],
         )
 
         fields = [
@@ -338,7 +347,8 @@ class TestCreateCloud:
         ]
 
         with pytest.raises(
-            AssertionError, match='PointFields and structured NumPy array dtype do not match'
+            AssertionError,
+            match='PointFields and structured NumPy array dtype do not match',
         ):
             create_cloud(header=None, fields=fields, points=points)
 
@@ -372,7 +382,7 @@ class TestCreateCloud:
             [
                 [1.0, 2.0, 3.0],
                 [4.0, 5.0, 6.0],
-            ]
+            ],
         )
 
         fields = [

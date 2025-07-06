@@ -39,19 +39,16 @@ select = ['ALL']
 
 ignore = [
     'ANN401',  # any-type
-    'D203',    # one-blank-line-before-class
-    'D212',    # multi-line-summary-first-line
     'PLR2004', # MagicValueComparisons
     'S101',    # AssertUsed
     'TC003',   # typing-only-standard-library-import
 
-    'COM812',
-    'ISC001',
+    'COM812', # Formatter
 ]
 
 [tool.ruff.lint.per-file-ignores]
 # Relaxed lints for test files
-"test/**/*.py" = ["T201", "SLF001", "ANN201", "INP001"]
+"test/**/*.py" = ["ANN001", "ANN201", "ANN204", "D", "PLR"]
 
 
 [tool.ruff.lint.flake8-quotes]

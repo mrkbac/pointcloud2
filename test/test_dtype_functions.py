@@ -165,7 +165,7 @@ class TestFieldsFromDtype:
                 ('uint32', '<u4'),
                 ('float32', '<f4'),
                 ('float64', '<f8'),
-            ]
+            ],
         )
         fields = fields_from_dtype(dtype)
 

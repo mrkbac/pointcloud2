@@ -30,8 +30,7 @@
 # https://github.com/ros2/common_interfaces/blob/rolling/sensor_msgs_py/sensor_msgs_py/point_cloud2.py
 
 
-"""
-PointCloud2 lib for non ROS environment.
+"""PointCloud2 lib for non ROS environment.
 
 .. include:: ../../README.md
 
@@ -57,8 +56,7 @@ __docformat__ = 'google'
 
 @dataclass
 class PointField:
-    """
-    PointField holds the description of one point entry in the PointCloud2 message format.
+    """PointField holds the description of one point entry in the PointCloud2 message format.
 
     Based on https://github.com/ros2/common_interfaces/blob/humble/sensor_msgs/msg/PointField.msg
     """
@@ -115,8 +113,7 @@ DUMMY_FIELD_PREFIX = 'unnamed_field'
 
 
 def dtype_from_fields(fields: Iterable[PointFieldMsg], point_step: int | None = None) -> np.dtype:
-    """
-    Convert a Iterable of sensor_msgs.msg.PointField messages to a np.dtype.
+    """Convert a Iterable of sensor_msgs.msg.PointField messages to a np.dtype.
 
     Example:
     >>> dtype_from_fields([PointField('x', 0, PointField.FLOAT32)])
@@ -191,8 +188,7 @@ def read_points(
     uvs: Iterable[int] | np.ndarray | None = None,
     reshape_organized_cloud: bool = False,
 ) -> np.ndarray:
-    """
-    Read points from a sensor_msgs.PointCloud2 compatible type.
+    """Read points from a sensor_msgs.PointCloud2 compatible type.
 
     See `pointcloud2.messages.Pointcloud2Msg` for more information.
 
@@ -255,8 +251,7 @@ def create_cloud(
     points: np.ndarray,
     step: int | None = None,
 ) -> PointCloud2:
-    """
-    Create a PointCloud2 message.
+    """Create a PointCloud2 message.
 
     Args:
         header: The point cloud header, see `pointcloud2.messages.Pointcloud2Msg.header`

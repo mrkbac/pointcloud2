@@ -6,8 +6,7 @@ from typing import Any, Protocol, TypedDict
 
 
 class PointFieldDict(TypedDict, total=False):
-    """
-    A dictionary representation of a PointField.
+    """A dictionary representation of a PointField.
 
     The `name` and `datatype` fields are required, while `count` and `offset` are optional.
     """
@@ -19,8 +18,7 @@ class PointFieldDict(TypedDict, total=False):
 
 
 class PointFieldMsg(Protocol):
-    """
-    PointField holds the description of one point entry in the PointCloud2 message format.
+    """PointField holds the description of one point entry in the PointCloud2 message format.
 
     Based on https://github.com/ros2/common_interfaces/blob/humble/sensor_msgs/msg/PointField.msg
     """
@@ -47,8 +45,7 @@ class PointFieldMsg(Protocol):
 
 
 class Pointcloud2Msg(Protocol):
-    """
-    Python Protocol for the ROS PointCloud2 message.
+    """Python Protocol for the ROS PointCloud2 message.
 
     Based on: https://github.com/ros2/common_interfaces/blob/humble/sensor_msgs/msg/PointCloud2.msg
 
