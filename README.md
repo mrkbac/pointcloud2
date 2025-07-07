@@ -29,4 +29,5 @@ PointCloud2 lib for non ROS environment.
 >>> read_points(cloud)
 array([(1., 0., 0., 255), (0., 1., 0., 255), (0., 0., 1., 255)],
       dtype=[('x', '<f4'), ('y', '<f4'), ('z', '<f4'), ('rgb', '<u4')])
+
 ```

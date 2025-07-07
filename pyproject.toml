@@ -62,3 +62,6 @@ quote-style = "single"
 
 [dependency-groups]
 dev = ["pytest>=8.3.5"]
+
+[tool.pytest.ini_options]
+addopts = "--doctest-modules --doctest-glob=README.md"
